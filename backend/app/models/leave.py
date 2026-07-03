@@ -8,8 +8,8 @@ LeaveStatus = Literal["Pending", "Approved", "Rejected"]
 class Leave(TypedDict):
     employeeId: str
     leaveType: str
-    startDate: date
-    endDate: date
+    startDate: str
+    endDate: str
     reason: str
     status: LeaveStatus
     managerComment: Optional[str]
@@ -29,8 +29,8 @@ def create_leave_model(
     return {
         "employeeId": employee_id,
         "leaveType": leave_type,
-        "startDate": start_date,
-        "endDate": end_date,
+        "startDate": start_date.isoformat(),
+        "endDate": end_date.isoformat(),
         "reason": reason,
         "status": "Pending",
         "managerComment": None,

@@ -112,8 +112,8 @@ async def update_employee_leave(
         {
             "$set": {
                 "leaveType": payload.leaveType,
-                "startDate": payload.startDate,
-                "endDate": payload.endDate,
+                "startDate": payload.startDate.isoformat(),
+                "endDate": payload.endDate.isoformat(),
                 "reason": payload.reason,
                 "updatedAt": datetime.now(timezone.utc),
             }
