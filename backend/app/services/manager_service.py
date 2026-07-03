@@ -5,7 +5,9 @@ from bson.errors import InvalidId
 from fastapi import HTTPException, status
 
 from app.database import leaves_collection, users_collection
+from app.services.audit_service import create_audit_log
 from app.utils.mongo import serialize_document, serialize_documents
+from app.utils.pagination import build_pagination_response
 
 
 async def get_manager_dashboard():
@@ -25,8 +27,20 @@ async def get_manager_dashboard():
     }
 
 
-async def get_pending_leaves():
+async def get_pending_leaves(page: int | None = None, limit: int | None = None):
     cursor = leaves_collection.find({"status": "Pending"}).sort("createdAt", -1)
+
+    if page and limit:
+        total = await leaves_collection.count_documents({"status": "Pending"})
+        cursor = cursor.skip((page - 1) * limit).limit(limit)
+        leaves = await cursor.to_list(length=limit)
+
+        return build_pagination_response(
+            await enrich_leaves_with_employee(leaves),
+            total=total,
+            page=page,
+            limit=limit,
+        )
 
     leaves = await cursor.to_list(length=None)
 
@@ -36,6 +50,8 @@ async def get_pending_leaves():
 async def get_manager_leaves(
     leave_status: str | None = None,
     department: str | None = None,
+    page: int | None = None,
+    limit: int | None = None,
 ):
     query = {}
 
@@ -50,6 +66,19 @@ async def get_manager_leaves(
         query["employeeId"] = {"$in": employee_ids}
 
     cursor = leaves_collection.find(query).sort("createdAt", -1)
+
+    if page and limit:
+        total = await leaves_collection.count_documents(query)
+        cursor = cursor.skip((page - 1) * limit).limit(limit)
+        leaves = await cursor.to_list(length=limit)
+
+        return build_pagination_response(
+            await enrich_leaves_with_employee(leaves),
+            total=total,
+            page=page,
+            limit=limit,
+        )
+
     leaves = await cursor.to_list(length=None)
 
     return await enrich_leaves_with_employee(leaves)
@@ -70,7 +99,7 @@ async def get_leave_for_manager(leave_id: str):
     return enriched[0]
 
 
-async def approve_leave(leave_id: str):
+async def approve_leave(leave_id: str, manager_id: str):
     object_id = parse_leave_id(leave_id)
     leave = await leaves_collection.find_one({"_id": object_id})
 
@@ -104,11 +133,21 @@ async def approve_leave(leave_id: str):
         )
 
     leave = await leaves_collection.find_one({"_id": object_id})
+    serialized_leave = (await enrich_leaves_with_employee([leave]))[0]
 
-    return (await enrich_leaves_with_employee([leave]))[0]
+    await create_audit_log(
+        action="leave.approved",
+        actor_id=manager_id,
+        actor_role="manager",
+        target_type="leave",
+        target_id=serialized_leave["id"],
+        metadata={"employeeId": serialized_leave["employeeId"]},
+    )
+
+    return serialized_leave
 
 
-async def reject_leave(leave_id: str, comment: str):
+async def reject_leave(leave_id: str, comment: str, manager_id: str):
     object_id = parse_leave_id(leave_id)
     leave = await leaves_collection.find_one({"_id": object_id})
 
@@ -142,14 +181,26 @@ async def reject_leave(leave_id: str, comment: str):
         )
 
     leave = await leaves_collection.find_one({"_id": object_id})
+    serialized_leave = (await enrich_leaves_with_employee([leave]))[0]
 
-    return (await enrich_leaves_with_employee([leave]))[0]
+    await create_audit_log(
+        action="leave.rejected",
+        actor_id=manager_id,
+        actor_role="manager",
+        target_type="leave",
+        target_id=serialized_leave["id"],
+        metadata={"employeeId": serialized_leave["employeeId"], "comment": comment},
+    )
+
+    return serialized_leave
 
 
 async def search_employees(
     name: str | None = None,
     email: str | None = None,
     department: str | None = None,
+    page: int | None = None,
+    limit: int | None = None,
 ):
     query = {"role": "employee"}
 
@@ -163,6 +214,18 @@ async def search_employees(
         query["department"] = {"$regex": department, "$options": "i"}
 
     cursor = users_collection.find(query).sort("name", 1)
+
+    if page and limit:
+        total = await users_collection.count_documents(query)
+        cursor = cursor.skip((page - 1) * limit).limit(limit)
+        employees = await cursor.to_list(length=limit)
+        serialized = serialize_documents(employees)
+
+        for employee in serialized:
+            employee.pop("password", None)
+
+        return build_pagination_response(serialized, total=total, page=page, limit=limit)
+
     employees = await cursor.to_list(length=None)
     serialized = serialize_documents(employees)
 

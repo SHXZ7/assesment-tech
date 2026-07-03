@@ -8,6 +8,7 @@ from fastapi.responses import JSONResponse
 
 from app.database import client, create_indexes, is_database_connected
 from app.routes import auth, employee, manager
+from app.utils.rate_limit import rate_limit_middleware
 
 
 logging.basicConfig(
@@ -33,6 +34,9 @@ app.add_middleware(
 app.include_router(auth.router)
 app.include_router(employee.router)
 app.include_router(manager.router)
+
+
+app.middleware("http")(rate_limit_middleware)
 
 
 @app.middleware("http")
