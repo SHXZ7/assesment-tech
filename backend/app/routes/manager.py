@@ -28,19 +28,27 @@ async def manager_dashboard(current_user: dict = Depends(require_manager)):
 
 
 @router.get("/pending")
-async def pending_leaves(current_user: dict = Depends(require_manager)):
-    return await get_pending_leaves()
+async def pending_leaves(
+    page: Optional[int] = Query(default=None, ge=1),
+    limit: Optional[int] = Query(default=None, ge=1, le=100),
+    current_user: dict = Depends(require_manager),
+):
+    return await get_pending_leaves(page=page, limit=limit)
 
 
 @router.get("/leaves")
 async def manager_leaves(
     status_filter: Optional[LeaveStatus] = Query(default=None, alias="status"),
     department: Optional[str] = Query(default=None),
+    page: Optional[int] = Query(default=None, ge=1),
+    limit: Optional[int] = Query(default=None, ge=1, le=100),
     current_user: dict = Depends(require_manager),
 ):
     return await get_manager_leaves(
         leave_status=status_filter,
         department=department,
+        page=page,
+        limit=limit,
     )
 
 
@@ -49,9 +57,17 @@ async def manager_search_employees(
     name: Optional[str] = Query(default=None),
     email: Optional[str] = Query(default=None),
     department: Optional[str] = Query(default=None),
+    page: Optional[int] = Query(default=None, ge=1),
+    limit: Optional[int] = Query(default=None, ge=1, le=100),
     current_user: dict = Depends(require_manager),
 ):
-    return await search_employees(name=name, email=email, department=department)
+    return await search_employees(
+        name=name,
+        email=email,
+        department=department,
+        page=page,
+        limit=limit,
+    )
 
 
 @router.get("/employee/{employee_id}/history")
@@ -67,7 +83,7 @@ async def approve_employee_leave(
     leave_id: str,
     current_user: dict = Depends(require_manager),
 ):
-    return await approve_leave(leave_id)
+    return await approve_leave(leave_id, manager_id=current_user["id"])
 
 
 @router.put("/reject/{leave_id}")
@@ -76,4 +92,8 @@ async def reject_employee_leave(
     payload: RejectLeaveRequest,
     current_user: dict = Depends(require_manager),
 ):
-    return await reject_leave(leave_id, comment=payload.comment)
+    return await reject_leave(
+        leave_id,
+        comment=payload.comment,
+        manager_id=current_user["id"],
+    )

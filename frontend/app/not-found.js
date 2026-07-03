@@ -1,17 +1,22 @@
 import Link from "next/link";
+import ThemeToggle from "@/src/components/ui/ThemeToggle";
 
 export default function NotFound() {
   return (
-    <main className="login-page">
-      <section className="login-panel">
-        <div>
-          <p className="eyebrow">404</p>
-          <h1>Page Not Found</h1>
-        </div>
+    <main className="not-found-page">
+      <div className="login-page-header">
+        <ThemeToggle />
+      </div>
+      <span className="not-found-bg" aria-hidden="true">
+        404
+      </span>
+      <div className="not-found-content">
+        <h1>Page not found</h1>
+        <p>The page you&apos;re looking for doesn&apos;t exist or has been moved.</p>
         <Link className="primary-button" href="/">
-          Back to Login
+          Go to Dashboard
         </Link>
-      </section>
+      </div>
     </main>
   );
 }

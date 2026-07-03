@@ -7,7 +7,9 @@ from fastapi import HTTPException, status
 from app.database import leaves_collection
 from app.models.leave import create_leave_model
 from app.schemas.leave import CreateLeaveRequest, UpdateLeaveRequest
+from app.services.audit_service import create_audit_log
 from app.utils.mongo import serialize_document, serialize_documents
+from app.utils.pagination import build_pagination_response
 
 
 async def get_employee_leaves(
@@ -15,6 +17,8 @@ async def get_employee_leaves(
     search: str | None = None,
     leave_status: str | None = None,
     leave_type: str | None = None,
+    page: int | None = None,
+    limit: int | None = None,
 ):
     query = {"employeeId": employee_id}
 
@@ -31,6 +35,19 @@ async def get_employee_leaves(
         ]
 
     cursor = leaves_collection.find(query).sort("createdAt", -1)
+
+    if page and limit:
+        total = await leaves_collection.count_documents(query)
+        cursor = cursor.skip((page - 1) * limit).limit(limit)
+        leaves = await cursor.to_list(length=limit)
+
+        return build_pagination_response(
+            serialize_documents(leaves),
+            total=total,
+            page=page,
+            limit=limit,
+        )
+
     leaves = await cursor.to_list(length=None)
 
     return serialize_documents(leaves)
@@ -77,8 +94,18 @@ async def create_employee_leave(employee_id: str, payload: CreateLeaveRequest):
     result = await leaves_collection.insert_one(leave)
 
     leave = await leaves_collection.find_one({"_id": result.inserted_id})
+    serialized_leave = serialize_document(leave)
 
-    return serialize_document(leave)
+    await create_audit_log(
+        action="leave.created",
+        actor_id=employee_id,
+        actor_role="employee",
+        target_type="leave",
+        target_id=serialized_leave["id"],
+        metadata={"status": "Pending", "leaveType": payload.leaveType},
+    )
+
+    return serialized_leave
 
 
 async def get_leave_by_id(leave_id: str, employee_id: str):
@@ -123,8 +150,18 @@ async def update_employee_leave(
     updated_leave = await leaves_collection.find_one(
         {"_id": object_id, "employeeId": employee_id}
     )
+    serialized_leave = serialize_document(updated_leave)
 
-    return serialize_document(updated_leave)
+    await create_audit_log(
+        action="leave.updated",
+        actor_id=employee_id,
+        actor_role="employee",
+        target_type="leave",
+        target_id=serialized_leave["id"],
+        metadata={"leaveType": payload.leaveType},
+    )
+
+    return serialized_leave
 
 
 async def delete_employee_leave(leave_id: str, employee_id: str):
@@ -136,7 +173,15 @@ async def delete_employee_leave(leave_id: str, employee_id: str):
             detail="Only pending leave requests can be cancelled.",
         )
 
+    leave_id = str(leave["_id"])
     await leaves_collection.delete_one({"_id": leave["_id"], "employeeId": employee_id})
+    await create_audit_log(
+        action="leave.cancelled",
+        actor_id=employee_id,
+        actor_role="employee",
+        target_type="leave",
+        target_id=leave_id,
+    )
 
     return {"message": "Leave request cancelled successfully."}
 

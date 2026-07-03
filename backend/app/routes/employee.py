@@ -34,6 +34,8 @@ async def get_my_leaves(
     search: Optional[str] = Query(default=None),
     status_filter: Optional[LeaveStatus] = Query(default=None, alias="status"),
     leave_type: Optional[LeaveType] = Query(default=None, alias="type"),
+    page: Optional[int] = Query(default=None, ge=1),
+    limit: Optional[int] = Query(default=None, ge=1, le=100),
     current_user: dict = Depends(require_employee),
 ):
     return await get_employee_leaves(
@@ -41,6 +43,8 @@ async def get_my_leaves(
         search=search,
         leave_status=status_filter,
         leave_type=leave_type,
+        page=page,
+        limit=limit,
     )
 
 

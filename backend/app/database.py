@@ -21,6 +21,7 @@ database = client[MONGODB_DB_NAME]
 
 users_collection = database["users"]
 leaves_collection = database["leaves"]
+audit_logs_collection = database["audit_logs"]
 
 USER_ROLES = ("employee", "manager")
 LEAVE_STATUSES = ("Pending", "Approved", "Rejected")
@@ -35,6 +36,8 @@ async def create_indexes():
         await users_collection.create_index("email", unique=True)
         await leaves_collection.create_index("employeeId")
         await leaves_collection.create_index("status")
+        await audit_logs_collection.create_index("actorId")
+        await audit_logs_collection.create_index("createdAt")
     except PyMongoError as error:
         print(f"MongoDB index setup skipped: {error}")
 
