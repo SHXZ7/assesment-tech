@@ -1,36 +1,177 @@
-This is a [Next.js](https://nextjs.org/) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
+# Leave Management System
 
-## Getting Started
+Full-stack Employee Leave Management MVP built for the Proteccio Data Full Stack Developer Intern assessment.
 
-First, run the development server:
+The application lets employees apply for leave, track leave status, edit/cancel pending requests, and lets managers review, approve, or reject leave requests with comments.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+## Features
+
+- Email/password login
+- JWT authentication
+- Role-based access control for `employee` and `manager`
+- Employee dashboard with request totals and recent activity
+- Apply leave with validation
+- Leave history with search and filters
+- Edit/cancel pending leave requests
+- Manager dashboard with approval metrics
+- Pending request review workflow
+- Approve/reject leave requests
+- Rejection comments
+- Employee search and leave history for managers
+- Responsive Next.js interface
+- MongoDB Atlas persistence
+- Seeded demo users
+
+## Technology Stack
+
+| Layer | Technology |
+| --- | --- |
+| Frontend | Next.js, React, Axios, CSS |
+| Backend | FastAPI, Python |
+| Database | MongoDB Atlas |
+| Auth | JWT, bcrypt |
+| Validation | Pydantic |
+| API Docs | FastAPI OpenAPI/Swagger, markdown docs, Postman collection |
+
+## Folder Structure
+
+```text
+darexai/
+  backend/
+    app/
+      auth/
+      models/
+      routes/
+      schemas/
+      services/
+      utils/
+      database.py
+      main.py
+      seed.py
+    tests/
+    requirements.txt
+  frontend/
+    app/
+    package.json
+  database/
+    schema.md
+  docs/
+    API.md
+  postman/
+    leave-management.postman_collection.json
+  .env.example
+  README.md
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Environment Variables
 
-You can start editing the page by modifying `app/page.js`. The page auto-updates as you edit the file.
+Create `.env` in the project root:
 
-This project uses [`next/font`](https://nextjs.org/docs/basic-features/font-optimization) to automatically optimize and load Inter, a custom Google Font.
+```env
+MONGODB_URI=mongodb+srv://<username>:<password>@<cluster-url>/
+MONGODB_DB_NAME=darexai
+JWT_SECRET_KEY=replace-with-a-long-random-secret
+JWT_ALGORITHM=HS256
+JWT_ACCESS_TOKEN_EXPIRE_MINUTES=60
+```
 
-## Learn More
+For the frontend, optionally create `frontend/.env.local`:
 
-To learn more about Next.js, take a look at the following resources:
+```env
+NEXT_PUBLIC_API_BASE_URL=http://127.0.0.1:8000
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Backend Setup
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js/) - your feedback and contributions are welcome!
+```bash
+cd backend
+pip install -r requirements.txt
+uvicorn app.main:app --reload
+```
 
-## Deploy on Vercel
+Backend runs at:
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+```text
+http://127.0.0.1:8000
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/deployment) for more details.
+Swagger/OpenAPI docs:
+
+```text
+http://127.0.0.1:8000/docs
+```
+
+## Database Setup
+
+The app uses MongoDB Atlas. Collections are created automatically when data is inserted.
+
+Seed demo users:
+
+```bash
+cd backend
+python -m app.seed
+```
+
+## Frontend Setup
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+Frontend runs at:
+
+```text
+http://localhost:3000
+```
+
+## Sample Login Credentials
+
+| Role | Email | Password |
+| --- | --- | --- |
+| Employee | employee@test.com | employee123 |
+| Manager | manager@test.com | manager123 |
+
+## API Documentation
+
+- Swagger: `http://127.0.0.1:8000/docs`
+- Markdown docs: [docs/API.md](docs/API.md)
+- Postman collection: [postman/leave-management.postman_collection.json](postman/leave-management.postman_collection.json)
+
+## Running Tests
+
+```bash
+cd backend
+pytest
+```
+
+The current tests cover password hashing, JWT payload extraction, and leave request validation.
+
+## Assumptions
+
+- There is no registration page because the assessment allows seeded users.
+- Managers can view all employee leave requests.
+- Employees can only view, edit, or cancel their own leave requests.
+- Only pending leaves can be edited, cancelled, approved, or rejected.
+- Leave balance calculation is outside the MVP scope.
+
+## Known Limitations
+
+- No refresh token flow.
+- No email notifications.
+- No pagination yet.
+- No Docker setup.
+- Test coverage is intentionally minimal for the MVP.
+- Employee profile page is not implemented because it was listed as suggested, not required.
+
+## Future Enhancements
+
+- JWT refresh tokens
+- Pagination for leave tables
+- Audit log collection for approvals/rejections
+- Leave balance calculation
+- Email notifications
+- Docker Compose setup
+- CI workflow with automated tests
+- Expanded unit and integration tests
